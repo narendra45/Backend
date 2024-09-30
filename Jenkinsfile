@@ -7,32 +7,57 @@ pipeline {
         disableConcurrentBuilds()
         ansiColor('xterm')
     }
-    environment{
-        def appVersion = '' //variable declaration
+    parameters {
+        choice(name: 'action', choices: ['Apply', 'Destroy'], description: 'Pick something')
     }
     stages {
-        stage('read the version'){
-            steps{
-                script{
-                    def packageJson = readJSON file: 'package.json'
-                    appVersion = packageJson.version
-                    echo "application version: $appVersion"
-                }
-            }
-        }
-        stage('Install Dependencies') {
+        stage('Init') {
             steps {
                sh """
-                npm install
-                ls -ltr
-                echo "application version: $appVersion"
+                cd 01-vpc
+                terraform init -reconfigure
                """
             }
         }
-        stage('Build'){
-            steps{
+        stage('Plan') {
+            when {
+                expression{
+                    params.action == 'Apply'
+                }
+            }
+            steps {
                 sh """
-                zip -q -r backend-${appVersion}.zip * -x Jenkinsfile -x backend-${appVersion}.zip
+                cd 01-vpc
+                terraform plan
+                """
+            }
+        }
+        stage('Deploy') {
+            when {
+                expression{
+                    params.action == 'Apply'
+                }
+            }
+            input {
+                message "Should we continue?"
+                ok "Yes, we should."
+            }
+            steps {
+                sh """
+                cd helm
+                ls -ltr
+                """
+            }
+        }
+        stage('Destroy') {
+            when {
+                expression{
+                    params.action == 'Destroy'
+                }
+            }
+            steps {
+                sh """
+                cd schema
                 ls -ltr
                 """
             }
@@ -41,7 +66,6 @@ pipeline {
     post { 
         always { 
             echo 'I will always say Hello again!'
-            //deleteDir()
             deleteDir()
         }
         success { 
