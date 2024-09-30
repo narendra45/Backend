@@ -14,8 +14,7 @@ pipeline {
         stage('Init') {
             steps {
                sh """
-                cd 01-vpc
-                terraform init -reconfigure
+                ls -ltr
                """
             }
         }
@@ -27,8 +26,7 @@ pipeline {
             }
             steps {
                 sh """
-                cd 01-vpc
-                terraform plan
+                echo planning
                 """
             }
         }
